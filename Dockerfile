@@ -1,20 +1,29 @@
-# Gunakan image resmi Go
-FROM golang:1.22-alpine
+# 🏗️ Stage 1: Build the Go binary
+FROM golang:1.25.1 AS builder
 
 # Set working directory
 WORKDIR /app
 
-# Copy semua file ke dalam container
+# Copy dependency files first (for better caching)
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy all source code
 COPY . .
 
-# Download dependencies
-RUN go mod tidy
-
-# Build binary
+# Build the binary
 RUN go build -o main .
 
-# Expose port
+# 🧩 Stage 2: Create lightweight production image
+FROM debian:bookworm-slim
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/main .
+
+# Expose the app port
 EXPOSE 8080
 
-# Jalankan aplikasi
+# Run the app
 CMD ["./main"]
